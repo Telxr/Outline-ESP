@@ -1,0 +1,100 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local localPlayer = Players.LocalPlayer
+
+local function createSeeThroughOutline(character, teamColor)
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            local surfaceGui = Instance.new("SurfaceGui")
+            surfaceGui.AlwaysOnTop = true
+            surfaceGui.Face = Enum.NormalId.Front
+            surfaceGui.Adornee = part
+            surfaceGui.Parent = part
+            
+            local outlineFrame = Instance.new("Frame")
+            outlineFrame.Size = UDim2.new(1, 0, 1, 0)
+            outlineFrame.BackgroundColor3 = teamColor
+            outlineFrame.BorderSizePixel = 0
+            outlineFrame.Parent = surfaceGui
+            
+            for _, face in pairs(Enum.NormalId:GetEnumItems()) do
+                local guiClone = surfaceGui:Clone()
+                guiClone.Face = face
+                guiClone.Parent = part
+            end
+        end
+    end
+end
+
+local function createESP(player)
+    local character = player.Character
+    if not character then return end
+    
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not humanoid then return end
+    
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "ESP"
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Size = UDim2.new(0, 200, 0, 50)
+    billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+    billboardGui.Adornee = character:FindFirstChild("Head")
+    billboardGui.Parent = character:FindFirstChild("Head")
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.TextSize = 14
+    nameLabel.Parent = billboardGui
+    
+    if player.Team then
+        nameLabel.TextColor3 = player.TeamColor.Color
+    else
+        nameLabel.TextColor3 = Color3.new(1, 1, 1)
+    end
+    
+    nameLabel.Text = player.Name
+    
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    infoLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.TextColor3 = Color3.new(1, 1, 1)
+    infoLabel.Font = Enum.Font.SourceSansBold
+    infoLabel.TextSize = 14
+    infoLabel.Parent = billboardGui
+    
+    createSeeThroughOutline(character, player.Team and player.TeamColor.Color or Color3.new(0, 0, 0))
+    
+    local function update()
+        if character and humanoid and humanoid.Health > 0 then
+            local distance = (localPlayer.Character.Head.Position - character.Head.Position).Magnitude
+            infoLabel.Text = string.format("HP: %d | Distance: %d studs", math.floor(humanoid.Health), math.floor(distance))
+        else
+            billboardGui:Destroy()
+        end
+    end
+    
+    RunService.RenderStepped:Connect(update)
+end
+
+local function addESPToPlayers()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= localPlayer then
+            createESP(player)
+        end
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        wait(1)
+        createESP(player)
+    end)
+end)
+
+addESPToPlayers()
+
+Players.PlayerAdded:Connect(addESPToPlayers)
